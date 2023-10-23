@@ -1,0 +1,170 @@
+[
+    {
+        "id": "d5e684c4e971895c",
+        "type": "tab",
+        "label": "KandangKoo",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "1f4522efb65f6a98",
+        "type": "debug",
+        "z": "d5e684c4e971895c",
+        "name": "msg.payload",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 830,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "2c6722b074d06bba",
+        "type": "mqtt in",
+        "z": "d5e684c4e971895c",
+        "name": "suhu",
+        "topic": "suhu",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "18eb91ea5e8bd61f",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 90,
+        "y": 260,
+        "wires": [
+            [
+                "3833f34a58ad443d"
+            ]
+        ]
+    },
+    {
+        "id": "5575e5ebd729c8bc",
+        "type": "mqtt in",
+        "z": "d5e684c4e971895c",
+        "name": "kelembapan",
+        "topic": "kelembapan",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "18eb91ea5e8bd61f",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 110,
+        "y": 340,
+        "wires": [
+            [
+                "3833f34a58ad443d"
+            ]
+        ]
+    },
+    {
+        "id": "3833f34a58ad443d",
+        "type": "join",
+        "z": "d5e684c4e971895c",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 310,
+        "y": 300,
+        "wires": [
+            [
+                "71b6bc655fa4e299"
+            ]
+        ]
+    },
+    {
+        "id": "ba45ee25462af742",
+        "type": "mongodb3 in",
+        "z": "d5e684c4e971895c",
+        "service": "_ext_",
+        "configNode": "441d531fa039ab79",
+        "name": "saveData",
+        "collection": "logs",
+        "operation": "save",
+        "x": 660,
+        "y": 300,
+        "wires": [
+            [
+                "1f4522efb65f6a98"
+            ]
+        ]
+    },
+    {
+        "id": "71b6bc655fa4e299",
+        "type": "function",
+        "z": "d5e684c4e971895c",
+        "name": "add timerecord",
+        "func": "const suhu = msg.payload.suhu;\nconst kelembapan = msg.payload.kelembapan;\n\nconst date = new Date();\nconst timerecord = date.toString();\n\nconst jsonPayload = {\n    \"suhu\": suhu,\n    \"kelembapan\": kelembapan,\n    \"timerecord\": timerecord,\n};\n\nmsg.payload = jsonPayload;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 300,
+        "wires": [
+            [
+                "ba45ee25462af742"
+            ]
+        ]
+    },
+    {
+        "id": "18eb91ea5e8bd61f",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "test.mosquitto.org",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "441d531fa039ab79",
+        "type": "mongodb3",
+        "uri": "mongodb+srv://raisasalsabil:WWVm0bdZEICaqArl@capstonecluster.w175rkv.mongodb.net/kandangdb?retryWrites=true&w=majority",
+        "name": "",
+        "options": "",
+        "parallelism": "-1"
+    }
+]
