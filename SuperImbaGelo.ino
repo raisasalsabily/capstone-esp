@@ -18,6 +18,17 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // Inisialisasi objek LCD dengan alamat I2C 
 const int redLEDPin = 5;  // Pin untuk LED merah
 const int blueLEDPin = 6; // Pin untuk LED biru
 
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  //Serial.println(&timeinfo, "%H:%M:%S");
+  Serial.println(&timeinfo, "%A,%d %b %Y %H:%M:%S");
+}
+
 void setup() {
   dht.begin();
   lcd.init(); // Inisialisasi LCD
@@ -78,14 +89,22 @@ void controlLEDs(float suhu) {
 
 void loop() {
   float suhu = dht.readTemperature(); // Membaca suhu dalam Celcius
+  float humidity = dht.readHumidity();
   // Menampilkan data suhu pada LCD
   lcd.setCursor(0, 1); // Set posisi kursor LCD baris 1
   lcd.print("Suhu : "); // Tampilkan teks "Suhu: "
   lcd.print(suhu); // Tampilkan nilai suhu
   lcd.print(" C"); // Tampilkan satuan Celsius
+  
+  Serial.print(F("Suhu: "));
+  Serial.print(suhu);
+  Serial.println(F("°C "));
+  Serial.print(F("Kelembapan: "));
+  Serial.print(humidity);
+  Serial.println();
   printLocalTime(); // Panggil fungsi untuk mendapatkan waktu lokal
   printLocalTimeOnLCD(); // Panggil fungsi untuk menampilkan waktu lokal di LCD
-  controlLEDs(suhu); // Panggil fungsi untuk mengontrol LED berdasarkan suhu
+  Serial.println();
   delay(1000); // Jeda 2 detik
   lcd.clear(); // Bersihkan tampilan LCD
 }
