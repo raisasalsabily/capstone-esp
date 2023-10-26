@@ -1,6 +1,7 @@
 #include <DHT.h>
 #include <LiquidCrystal_I2C.h>
 #include <WiFi.h>
+#include <PubSubClient.h>
 #include "time.h"
 #define DHTPIN 23        // Pin sensor DHT22 
 #define DHTTYPE DHT22   // Ubah jenis sensor menjadi DHT22
@@ -8,9 +9,18 @@
 const char* ssid       = "OdadingMangIwan";
 const char* password   = "udahdinyalain";
 const char* ntpServer = "pool.ntp.org";
+const char* mqtt_server = "test.mosquitto.org"; // ganti dengan IP local
 const long  gmtOffset_sec = 21600;
 const int   daylightOffset_sec = 3600;
 struct tm timeinfo;
+
+// for MQTT
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+unsigned long lastMsg = 0;
+float temp = 0;
+float hum = 0;
 
 DHT dht(DHTPIN, DHTTYPE); // Inisialisasi objek sensor DHT
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Inisialisasi objek LCD dengan alamat I2C dan ukuran 16x2
@@ -27,6 +37,33 @@ void printLocalTime()
   }
   //Serial.println(&timeinfo, "%H:%M:%S");
   Serial.println(&timeinfo, "%A,%d %b %Y %H:%M:%S");
+}
+
+// callback for MQTT
+void callback(char* topic, byte* payload, unsigned int length) { 
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) { 
+    Serial.print((char)payload[i]);
+  }}
+
+// connect and reconnect MQTT
+void reconnect() { 
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str())) {
+      Serial.println("Connected");
+      client.publish("Kandangkoo/Publish", "Welcome");
+      client.subscribe("Kandangkoo/Subscribe"); 
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }}
 }
 
 void setup() {
@@ -51,9 +88,13 @@ void setup() {
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   printLocalTime();
 
-  // Disconnect WiFi as it's no longer needed
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
+  // Disconnect WiFi as it's no longer needed - tidak dipakai karena selalu butuh WiFi untuk MQTT
+  // WiFi.disconnect(true);
+  // WiFi.mode(WIFI_OFF);
+
+  // set server MQTT
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 }
 
 void printLocalTimeOnLCD() {
@@ -88,6 +129,14 @@ void controlLEDs(float suhu) {
 }
 
 void loop() {
+
+  // connect or reconnect to MQTT
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+
   float suhu = dht.readTemperature(); // Membaca suhu dalam Celcius
   float humidity = dht.readHumidity();
   // Menampilkan data suhu pada LCD
@@ -96,12 +145,22 @@ void loop() {
   lcd.print(suhu); // Tampilkan nilai suhu
   lcd.print(" C"); // Tampilkan satuan Celsius
   
-  Serial.print(F("Suhu: "));
-  Serial.print(suhu);
-  Serial.println(F("°C "));
-  Serial.print(F("Kelembapan: "));
-  Serial.print(humidity);
-  Serial.println();
+  //publish data using MQTT + serial print
+  unsigned long now = millis();
+  if (now - lastMsg > 2000) { //perintah publish data
+    lastMsg = now;
+
+    String temp = String(suhu, 2);
+    client.publish("suhu", temp.c_str()); // publish temp topic /Kandangkoo/temp
+    String hum = String(humidity, 2);
+    client.publish("kelembapan", hum.c_str()); // publish temp topic /Kandangkoo/temp
+
+    Serial.print("Suhu: ");
+    Serial.println(temp);
+    Serial.print("Kelembapan: ");
+    Serial.println(hum);
+  }
+  
   printLocalTime(); // Panggil fungsi untuk mendapatkan waktu lokal
   printLocalTimeOnLCD(); // Panggil fungsi untuk menampilkan waktu lokal di LCD
   Serial.println();
