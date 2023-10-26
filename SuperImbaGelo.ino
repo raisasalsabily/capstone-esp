@@ -9,7 +9,7 @@
 const char* ssid       = "OdadingMangIwan";
 const char* password   = "udahdinyalain";
 const char* ntpServer = "pool.ntp.org";
-const char* mqtt_server = "test.mosquitto.org"; // ganti dengan IP local
+const char* mqtt_server = "test.mosquitto.org";// mosquitto server url
 const long  gmtOffset_sec = 21600;
 const int   daylightOffset_sec = 3600;
 struct tm timeinfo;
@@ -154,16 +154,17 @@ void loop() {
     client.publish("suhu", temp.c_str()); // publish temp topic /Kandangkoo/temp
     String hum = String(humidity, 2);
     client.publish("kelembapan", hum.c_str()); // publish temp topic /Kandangkoo/temp
-
-    Serial.print("Suhu: ");
-    Serial.println(temp);
-    Serial.print("Kelembapan: ");
-    Serial.println(hum);
   }
-  
+
+  Serial.print(F("Suhu: "));
+  Serial.print(suhu);
+  Serial.println(F("°C "));
+  Serial.print(F("Kelembapan: "));
+  Serial.print(humidity);
+  Serial.println();
   printLocalTime(); // Panggil fungsi untuk mendapatkan waktu lokal
   printLocalTimeOnLCD(); // Panggil fungsi untuk menampilkan waktu lokal di LCD
   Serial.println();
-  delay(1000); // Jeda 2 detik
+  delay(2000); // Jeda 2 detik
   lcd.clear(); // Bersihkan tampilan LCD
 }
