@@ -1,0 +1,179 @@
+#include <DHT.h>
+#define DHTPIN 23        // Pin sensor DHT22 
+#define DHTPIN2 19        // Pin sensor DHT22
+#define DHTTYPE DHT22   // Ubah jenis sensor menjadi DHT22
+DHT dht(DHTPIN, DHTTYPE); // Inisialisasi objek sensor DHT
+DHT dht2(DHTPIN2, DHTTYPE); // Inisialisasi objek sensor DHT
+
+//Coding lcd
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+//Coding RTC
+#include <RTClib.h>
+#include <Wire.h>
+RTC_DS1307 rtc;
+
+//Coding servo
+#include <ESP32Servo.h>
+const int servoPin = 5;
+Servo mekanik;
+
+// Pin configuration for HC-SR04
+const int trigPin = 15;
+const int echoPin = 2;
+
+const int relay1 =32;
+const int relay2 =33;
+const int relay3 =25;
+const int relay4 =26;
+
+
+void setup(){
+  Serial.begin(115200);
+  dht.begin();
+  dht2.begin();
+
+  //koding lcd
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+  // coding rtc
+  Wire.begin();
+  if(!rtc.begin()){
+    Serial.println("RTC tidak terhubung");
+    lcd.setCursor(0,0);
+    lcd.print("RTC Tidak Konek");
+    while(1);
+  }
+
+  // Uncomment this line to set the RTC time with the compile time
+  rtc.adjust(DateTime(__DATE__, __TIME__)); // Mengatur RTC dengan waktu kompilasi
+
+  pinMode(relay1, OUTPUT);
+  digitalWrite(relay1, HIGH);
+  pinMode(relay2, OUTPUT);
+  digitalWrite(relay2, HIGH);
+  pinMode(relay3, OUTPUT);
+  digitalWrite(relay3, HIGH);
+  pinMode(relay4, OUTPUT);
+  digitalWrite(relay4, HIGH);
+
+  //HCSR
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  digitalWrite(trigPin, LOW);
+
+  // coding servo
+  mekanik.attach(servoPin);
+  mekanik.write(90);
+}
+
+void loop(){
+  float suhu_1 = dht.readTemperature(); // Membaca suhu dari sensor pertama
+  float kelembapan_1 = dht.readHumidity(); // Membaca kelembapan dari sensor pertama
+  float suhu_2 = dht2.readTemperature(); // Membaca suhu dari sensor pertama
+  float kelembapan_2 = dht2.readHumidity(); // Membaca kelembapan dari sensor pertama
+
+  float suhu_rata = (suhu_1 + suhu_2) / 2.0;
+  float kelembapan_rata = (kelembapan_1 + kelembapan_2) / 2.0;
+
+  // koding rtc
+  DateTime now = rtc.now();
+  int tahun = now.year();
+  int bulan = now.month();
+  int tanggal = now.day();
+  int jam = now.hour();
+  int menit = now.minute();
+  int detik = now.second();
+
+    // Trigger the HC-SR04 to measure distance
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Read the echo duration
+  long duration = pulseIn(echoPin, HIGH);
+
+  // Calculate distance in cm
+  float distance = duration * 0.034 / 2;
+  
+  //Kondisi Lampu
+  if (suhu_1 < 28.5){
+    digitalWrite(relay1, LOW);
+  }else if (suhu_1 >= 28.5) {
+    digitalWrite(relay1, HIGH); 
+  }
+  
+  //Kondisi Kipas
+  if (suhu_1 > 29){
+    digitalWrite(relay2, LOW);
+  }else if (suhu_1 <= 29) {
+    digitalWrite(relay2, HIGH); 
+  }
+
+  // Makan
+  if((jam==17) && (menit % 2 == 1) && (detik==0)){
+    kasihpakan_pagi();
+  }
+
+  //Minum
+  if (distance > 20.13 && distance !=0) {
+    digitalWrite(relay3, LOW);
+  }else if (distance <= 20.13 && distance !=0) {
+    digitalWrite(relay3, HIGH); 
+  }
+
+  //Disinfektan
+  if((jam==17) && (menit % 2 == 0) && (detik==0)){
+    digitalWrite(relay4, LOW);
+    delay(15000);
+    digitalWrite(relay4, HIGH);
+  }
+
+
+  lcd.setCursor(0, 0); // Set posisi kursor LCD baris 1
+  lcd.print("Suhu : "); // Tampilkan teks "Suhu: "
+  lcd.print(suhu_1); // Tampilkan nilai suhu
+  lcd.print(" C"); // Tampilkan satuan Celsius
+
+  lcd.setCursor(0, 1); // Set posisi kursor LCD baris 1
+  lcd.print("Kelembapan: "); // Tampilkan teks "Suhu: "
+  lcd.print(kelembapan_1); // Tampilkan nilai suhu
+  delay(500); // Jeda 2 detik
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+  Serial.print(F("Suhu1: "));
+  Serial.print(suhu_1);
+  Serial.println(F("°C "));
+  Serial.print(F("Kelembapan1:"));
+  Serial.print(kelembapan_1);
+  Serial.println();
+  Serial.print(F("Suhu2: "));
+  Serial.print(suhu_2);
+  Serial.println(F("°C "));
+  Serial.print(F("Kelembapan2:"));
+  Serial.print(kelembapan_2);
+  Serial.println();
+  Serial.print(F("Suhu_Rata: "));
+  Serial.print(suhu_rata);
+  Serial.println(F("°C "));
+  Serial.print(F("Kelembapan_Rata:"));
+  Serial.print(kelembapan_rata);
+  Serial.println();
+  Serial.println(String()+"Tanggal :"+tanggal+"-"+bulan+"-"+tahun);
+  Serial.println(String()+"Waktu :"+jam+"-"+menit+"-"+detik);
+  Serial.println();
+}
+
+// coding servo
+void kasihpakan_pagi(){
+  lcd.clear();
+  lcd.print("BREAKFAST..");
+  mekanik.write(180);
+  delay(3000);
+  mekanik.write(90);
+  lcd.clear();
+}
